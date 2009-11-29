@@ -4,6 +4,11 @@ process.mixin(require('sys'));
 
 puts(parser.hello);
 p = new parser.Parser();
-puts(p.parse("input"));
-puts(p.parse("0"));
-puts(p.parse("He"));
+p.addListener("receive", function(x) {
+  puts("RECV: " + x);
+});
+puts(p.parse("2"));
+puts(p.parse("h"));
+puts(p.parse("2"));
+puts(p.parse("hello1"));
+//puts(p.parse("He"));

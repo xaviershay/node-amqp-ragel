@@ -1,6 +1,7 @@
 #include <v8.h>
 #include <node.h>
 #include <node_events.h>
+#include <string.h>
 
 using namespace v8;
 using namespace node;
@@ -24,22 +25,37 @@ class Parser : public EventEmitter {
     }
 
     int Parse(char* input) {
-      int cs, res = 0;
+      HandleScope scope;
+
+      printf("Parsing: %s\n", input);
+      int res = 0;
       char *p = input;
+      char *pe = input + strlen(input);
+      Local<Value> ret;
+
       %%{
-        main :=
-          [a-z]+
-          0 @{ res = 1; fbreak; };
+        action FrameEnd {
+          ret = String::New("abcde");
+          Emit("receive", 0, &ret); // yields undefined, so incorrect
+          printf("GOT FRAME\n");
+        }
+        ALPHA = 0x41..0x5a | 0x61..0x7a;
+        DIGIT = 0x30..0x39;
+        STR = ALPHA+ DIGIT;
+        main := STR @FrameEnd;
+
         write init;
-        write exec noend;
+        write exec;
       }%%
-      return res;
+      return cs;
     }
 
   int counter;
+  int cs;
 
   Parser() : EventEmitter() {
     counter = 0;
+    cs = 0;
   }
  protected:
 
