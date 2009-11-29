@@ -7,6 +7,7 @@ using namespace v8;
 using namespace node;
 
 %% machine amqp;
+%% alphtype unsigned char;
 %% write data;
 
 class Parser : public EventEmitter {
@@ -24,12 +25,12 @@ class Parser : public EventEmitter {
       target->Set(String::NewSymbol("Parser"), t->GetFunction());
     }
 
-    int Parse(char* input) {
+    int Parse(unsigned char* input, unsigned int length) {
       HandleScope scope;
 
       int res = 0;
-      char *p = input;
-      char *pe = input + strlen(input);
+      unsigned char *p = input;
+      unsigned char *pe = input + length;
       Local<Value> ret;
 
       %%{
@@ -61,7 +62,7 @@ class Parser : public EventEmitter {
         protocol_version = 0x00.0x09.0x01;
         protocol_header = literal_AMQP protocol_id protocol_version;
         short_uint = OCTET{2,};
-        channel = short_uint @FrameEnd;
+        channel = short_uint;
         long_uint = OCTET{4,};
         payload_size = long_uint;
         frame_properties = channel payload_size;
@@ -108,7 +109,7 @@ class Parser : public EventEmitter {
         field_array = long_int field_value*;
 
         # instantiate machine rules
-        main:= amqp_unit;
+        main:= amqp_unit @FrameEnd;
       }%%
 
       %%{
@@ -147,9 +148,9 @@ class Parser : public EventEmitter {
       return ThrowException(String::New("Must give string to parse as argument"));
     }
 
-    String::Utf8Value input(args[0]->ToString());
+    String::AsciiValue input(args[0]->ToString());
 
-    int r = parser->Parse(*input);
+    int r = parser->Parse((unsigned char *)*input, input.length());
 
     return Integer::New(r);
   }
