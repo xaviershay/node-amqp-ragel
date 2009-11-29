@@ -5,6 +5,9 @@
 using namespace v8;
 using namespace node;
 
+%% machine amqp;
+%% write data;
+
 class Parser : public EventEmitter {
   public:
     static void Initialize(Handle<Object> target) {
@@ -20,9 +23,17 @@ class Parser : public EventEmitter {
       target->Set(String::NewSymbol("Parser"), t->GetFunction());
     }
 
-    int Parse(const char* input) {
-      counter += 1;
-      return counter;
+    int Parse(char* input) {
+      int cs, res = 0;
+      char *p = input;
+      %%{
+        main :=
+          [a-z]+
+          0 @{ res = 1; fbreak; };
+        write init;
+        write exec noend;
+      }%%
+      return res;
     }
 
   int counter;
@@ -49,7 +60,7 @@ class Parser : public EventEmitter {
     HandleScope scope;
 
     if (args.Length() == 0 || !args[0]->IsString()) {
-      return ThrowException(String::New("Must give conninfo string as argument"));
+      return ThrowException(String::New("Must give string to parse as argument"));
     }
 
     String::Utf8Value input(args[0]->ToString());

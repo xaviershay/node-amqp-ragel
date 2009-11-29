@@ -12,4 +12,4 @@ def configure(conf):
 def build(bld):
   obj = bld.new_task_gen("cxx", "shlib", "node_addon")
   obj.target = "hello"
-  obj.source = "hello.cc"
+  obj.source = "hello.c"

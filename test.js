@@ -5,5 +5,5 @@ process.mixin(require('sys'));
 puts(parser.hello);
 p = new parser.Parser();
 puts(p.parse("input"));
-puts(p.parse("input"));
-puts(p.parse("input"));
+puts(p.parse("0"));
+puts(p.parse("He"));
