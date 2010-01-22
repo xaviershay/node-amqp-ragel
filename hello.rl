@@ -25,18 +25,24 @@ class Parser : public EventEmitter {
       target->Set(String::NewSymbol("Parser"), t->GetFunction());
     }
 
-    int Parse(unsigned char* input, unsigned int length) {
+    Local<Object> Parse(unsigned char* input, unsigned int length) {
       HandleScope scope;
 
       int res = 0;
       unsigned char *p = input;
       unsigned char *pe = input + length;
-      Local<Value> ret;
+      Local<Object> ret = Object::New();
+      Local<Value> frame;
+
+      for (int i = 0; i < length; ++i) {
+        printf("%x ", *(p + i));
+      }
+      printf("\n");
 
       %%{
         action FrameEnd {
-          ret = String::New("abcde");
-          Emit("receive", 0, &ret); // yields undefined, so incorrect
+          frame = String::New("abcde");
+          Emit("receive", 0, &frame); // yields undefined, so incorrect
           printf("GOT FRAME\n");
         }
 
@@ -62,12 +68,15 @@ class Parser : public EventEmitter {
         protocol_version = 0x00.0x09.0x01;
         protocol_header = literal_AMQP protocol_id protocol_version;
         short_uint = OCTET{2,};
-        channel = short_uint;
+        channel = short_uint >{
+          printf("%x\n", *fpc);
+          printf("%x\n", fc);
+          ret->Set(String::New("channel"), Integer::New(fc)); };
         long_uint = OCTET{4,};
         payload_size = long_uint;
-        frame_properties = channel payload_size;
-        class_id = any; # 0x01..0xff;
-        method_id = any; # 0x01..0xff;
+        frame_properties = channel  payload_size;
+        class_id = 0x01..0xff;
+        method_id = 0x01..0xff @{ ret->Set(String::New("method"), Integer::New(1)); };
         long_long_uint = OCTET{8,};
         string_char = OCTET;
         short_string = OCTET string_char*;
@@ -90,7 +99,7 @@ class Parser : public EventEmitter {
         amqp_field = BIT | OCTET | short_uint | long_uint | long_long_uint | short_string | long_string | timestamp | field_table;
         method_payload = class_id method_id amqp_field*;
         frame_end = 0xce;
-        method_top = 0x01;
+        method_top = 0x01 ;
         method_frame = method_top frame_properties method_payload frame_end;
         content_class = OCTET;
         content_weight = "\0";
@@ -116,7 +125,7 @@ class Parser : public EventEmitter {
         write init;
         write exec;
       }%%
-      return cs;
+      return ret;
     }
 
   int counter;
@@ -144,15 +153,27 @@ class Parser : public EventEmitter {
 
     HandleScope scope;
 
-    if (args.Length() == 0 || !args[0]->IsString()) {
-      return ThrowException(String::New("Must give string to parse as argument"));
+    if (args.Length() == 0 || !args[0]->IsArray()) {
+      return ThrowException(String::New("Argument must be an array"));
     }
 
-    String::AsciiValue input(args[0]->ToString());
+    Local<Array> input = args[0].toArray();
+    unsigned char buffer[input->Length()];
+    for (int i = 0; i < input->Length(); ++i) {
+      buffer[i] = (unsigned char)input->Get(Integer::New(i)).Value();
+    }
+    /*
+    uint16_t * buffer = malloc(uint16_t * input.length());
+    input.Write(buffer);
+    for (int i = 0; i < input.length(); ++i) {
+      printf("%x ", *(buffer + i));
+    }
+    printf("\n");
+    */
 
-    int r = parser->Parse((unsigned char *)*input, input.length());
+    Local<Object> ret = parser->Parse(buffer, input->Length());
 
-    return Integer::New(r);
+    return ret;
   }
 
 };
